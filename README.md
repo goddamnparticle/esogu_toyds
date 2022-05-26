@@ -1,30 +1,9 @@
 <div id="top"></div>
-<!--
-*** Thanks for checking out the Best-README-Template. If you have a suggestion
-*** that would make this better, please fork the repo and create a pull request
-*** or simply open an issue with the tag "enhancement".
-*** Don't forget to give the project a star!
-*** Thanks again! Now go create something AMAZING! :D
--->
-
-
-<!-- PROJECT SHIELDS -->
-<!--
-*** I'm using markdown "reference style" links for readability.
-*** Reference links are enclosed in brackets [ ] instead of parentheses ( ).
-*** See the bottom of this document for the declaration of the reference variables
-*** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
-*** https://www.markdownguide.org/basic-syntax/#reference-style-links
--->
-<!-- [![Contributors][contributors-shield]][contributors-url] -->
-<!-- [![Forks][forks-shield]][forks-url] -->
-<!-- [![Stargazers][stars-shield]][stars-url] -->
-<!-- [![Issues][issues-shield]][issues-url] -->
-
 <div align="center">
 
 [![License: CC BY-SA 4.0](https://licensebuttons.net/l/by-sa/4.0/88x31.png)](https://creativecommons.org/licenses/by-sa/4.0/)
-[![License: MIT][license1-shield]](https://github.com/goddamnparticle/esogu_toyds/LICENSE.txt)
+[![License: MIT][license1-shield]](https://github.com/goddamnparticle/esogu_toyds/blob/master/LICENSE-MIT.txt)
+
 </div>
 
 <!-- PROJECT LOGO -->
@@ -47,21 +26,6 @@
 ![Product Name Screen Shot](imgs/bunny.png)
 
 This repo provides a toy dataset collected by EEE undergraduate students of [Eskisehir Osmangazi University](https://ogu.edu.tr) with implementation of [PointNet++](https://arxiv.org/abs/1706.02413). Dataset consists of 10 different object classes and each class contains 10 different 3D objects. Objects were saved as ASCII coded `.ply` files. 3D objects were obtained with third-party photogrammetry software ([Meshroom](https://alicevision.org/#meshroom), [Agisoft](https://agisoft.com)). Also, for cleaning and editing tasks [MeshLab](https://meshlab.net) was utilized.
-
-<!-- #### Built With -->
-
-<!-- This section should list any major frameworks/libraries used to bootstrap your project. Leave any add-ons/plugins for the acknowledgements section. Here are a few examples. -->
-
-<!-- * [Next.js](https://nextjs.org/) -->
-<!-- * [React.js](https://reactjs.org/) -->
-<!-- * [Vue.js](https://vuejs.org/) -->
-<!-- * [Angular](https://angular.io/) -->
-<!-- * [Svelte](https://svelte.dev/) -->
-<!-- * [Laravel](https://laravel.com) -->
-<!-- * [Bootstrap](https://getbootstrap.com) -->
-<!-- * [JQuery](https://jquery.com) -->
-
-
 
 <!-- GETTING STARTED -->
 ## Getting Started
@@ -97,7 +61,7 @@ To create a point cloud dataset `.ply` object files require sampling. `sample.py
 
 This Colab notebook trains a PointNet++ model. Notebook only works with the sampled binary dataset because of high computation costs. 
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/googlecolab/colabtools/blob/master/notebooks/colab-github-demo.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/goddamnparticle/esogu_toyds/blob/master/train_notebook.ipynb)
 
 
 ## Prerequisites
@@ -162,7 +126,7 @@ If you have a suggestion that would make sampling and training faster, please fo
 <!-- LICENSE -->
 ## License
 
-Dataset distributed under CC-BY-4.0 License and other stuff distributed under the MIT License. See `CC-BY-4.0_LICENSE.txt` and `LICENSE.txt` for more information.
+Dataset distributed under CC-BY-4.0 License and other stuff distributed under the MIT License. See `LICENSE_CC-BY-4.0.txt` and `LICENSE-MIT.txt` for more information.
 
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
