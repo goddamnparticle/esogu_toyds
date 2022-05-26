@@ -1,12 +1,4 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# ## Dataset and Dataloader
-
-# In[1]:
-
 import torch
-import random
 import numpy as np
 import torch.nn as nn
 from tqdm import tqdm
@@ -16,92 +8,11 @@ from torchvision.transforms import transforms
 from torchvision.datasets.folder import DatasetFolder
 
 USE_CPU = False
+DATA_PATH = ".data/ModelNet40_Binary/"
 NUM_EPOCHS = 5
 BATCH_SIZE = 128
+EXT = (".npy",)
 
-
-# In[2]:
-
-
-def read_ply(path):
-
-    file = open(path, "r")
-    safe_number = 20
-    for i in range(safe_number):
-        line = file.readline().strip()
-        if "element vertex" in line:
-            n_verts = int(line.split(" ")[2])
-
-        elif "element face" in line:
-            n_faces = int(line.split(" ")[2])
-
-        elif "end_header" in line:
-            break
-
-    verts = [[float(s) for s in file.readline().strip().split(" ")] for i_vert in range(n_verts)]
-    faces = [
-        [int(s) for s in file.readline().strip().split(" ")][1:] for i_face in range(n_faces)
-    ]
-
-    file.close()
-
-    return torch.tensor(verts), torch.tensor(faces)
-
-def read_off(path):
-
-    file = open(path, "r")
-    off_header = file.readline().strip()
-    if "OFF" == off_header:
-        n_verts, n_faces, __ = tuple([int(s) for s in file.readline().strip().split(" ")])
-    else:
-        n_verts, n_faces, __ = tuple([int(s) for s in off_header[3:].split(" ")])
-
-    verts = [[float(s) for s in file.readline().strip().split(" ")] for i_vert in range(n_verts)]
-    faces = [
-        [int(s) for s in file.readline().strip().split(" ")][1:] for i_face in range(n_faces)
-    ]
-    file.close()
-
-    return torch.tensor(verts), torch.tensor(faces)
-
-
-class PointSampler(object):
-    def __init__(self, num_points):
-        self.num_points = num_points
-
-    def triangle_area(self, pt1, pt2, pt3):
-        side_a = np.linalg.norm(pt1 - pt2)
-        side_b = np.linalg.norm(pt2 - pt3)
-        side_c = np.linalg.norm(pt3 - pt1)
-        # Heron's Formula for the triangle area.
-        u = 0.5 * (side_a + side_b + side_c)
-        return max(u * (u - side_a) * (u - side_b) * (u - side_c), 0) ** 0.5
-
-    def sample_point(self, pt1, pt2, pt3):
-        # barycentric coordinates on a triangle
-        # https://mathworld.wolfram.com/BarycentricCoordinates.html
-        s, t = sorted([random.random(), random.random()])
-        return s * pt1 + (t - s) * pt2 + (1 - t) * pt3
-
-    def __call__(self, mesh):
-        verts, faces = mesh
-        verts = np.array(verts)
-        areas = np.zeros((len(faces)))
-        for i in range(len(areas)):
-            areas[i] = self.triangle_area(
-                verts[faces[i][0]], verts[faces[i][1]], verts[faces[i][2]]
-            )
-        sampled_faces = random.choices(faces, weights=areas, cum_weights=None, k=self.num_points)
-        sampled_points = np.zeros((self.num_points, 3))
-        for i in range(len(sampled_faces)):
-            sampled_points[i] = self.sample_point(
-                verts[sampled_faces[i][0]], verts[sampled_faces[i][1]], verts[sampled_faces[i][2]]
-            )
-        return sampled_points
-
-
-# EXT = (".off", ".ply",)
-EXT = (".npy", )
 
 class CustomDS(DatasetFolder):
     def __init__(
@@ -122,37 +33,20 @@ class CustomDS(DatasetFolder):
         )
 
 
-# In[3]:
-
 class Normalize(object):
     def __call__(self, pointcloud):
         assert len(pointcloud.shape) == 2
-        
-        norm_pointcloud = pointcloud - np.mean(pointcloud, axis=0) 
+
+        norm_pointcloud = pointcloud - np.mean(pointcloud, axis=0)
         norm_pointcloud /= np.max(np.linalg.norm(norm_pointcloud, axis=1))
 
-        return  norm_pointcloud
+        return norm_pointcloud
+
 
 class ToTensor(object):
     def __call__(self, pointcloud):
-        assert len(pointcloud.shape)==2
-
+        assert len(pointcloud.shape) == 2
         return torch.from_numpy(pointcloud)
-
-data_path = "./ModelNet40_Binary/"
-
-transform = transforms.Compose([
-    Normalize(),
-    ToTensor(),
-    ])
-
-train_dataset = CustomDS(root=data_path + "train", loader=np.load, transform=transform)
-test_dataset = CustomDS(root=data_path + "test", loader=np.load, transform=transform)
-trainDataLoader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=10)
-testDataLoader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=10)
-
-
-# In[4]:
 
 
 def sample_and_group(npoint, radius, nsample, xyz, points, returnfps=False):
@@ -208,6 +102,7 @@ def sample_and_group_all(xyz, points):
         new_points = grouped_xyz
     return new_xyz, new_points
 
+
 def random_point_dropout(batch_pc, max_dropout_ratio=0.875):
     """batch_pc: BxNx3"""
     for b in range(batch_pc.shape[0]):
@@ -216,6 +111,7 @@ def random_point_dropout(batch_pc, max_dropout_ratio=0.875):
         if len(drop_idx) > 0:
             batch_pc[b, drop_idx, :] = batch_pc[b, 0, :]  # set to the first point
     return batch_pc
+
 
 def random_scale_point_cloud(batch_data, scale_low=0.8, scale_high=1.25):
     """Randomly scale the point cloud. Scale is per point cloud.
@@ -230,6 +126,7 @@ def random_scale_point_cloud(batch_data, scale_low=0.8, scale_high=1.25):
         batch_data[batch_index, :, :] *= scales[batch_index]
     return batch_data
 
+
 def shift_point_cloud(batch_data, shift_range=0.1):
     """Randomly shift point cloud. Shift is per point cloud.
     Input:
@@ -242,6 +139,7 @@ def shift_point_cloud(batch_data, shift_range=0.1):
     for batch_index in range(B):
         batch_data[batch_index, :, :] += shifts[batch_index, :]
     return batch_data
+
 
 def farthest_point_sample(xyz, npoint):
     """
@@ -266,6 +164,7 @@ def farthest_point_sample(xyz, npoint):
         farthest = torch.max(distance, -1)[1]
     return centroids
 
+
 def index_points(points, idx):
     """
 
@@ -289,6 +188,7 @@ def index_points(points, idx):
     new_points = points[batch_indices, idx, :]
     return new_points
 
+
 def square_distance(src, dst):
     """
     Calculate Euclid distance between each two points.
@@ -308,9 +208,10 @@ def square_distance(src, dst):
     B, N, _ = src.shape
     _, M, _ = dst.shape
     dist = -2 * torch.matmul(src, dst.permute(0, 2, 1))
-    dist += torch.sum(src ** 2, -1).view(B, N, 1)
-    dist += torch.sum(dst ** 2, -1).view(B, 1, M)
+    dist += torch.sum(src**2, -1).view(B, N, 1)
+    dist += torch.sum(dst**2, -1).view(B, 1, M)
     return dist
+
 
 def query_ball_point(radius, nsample, xyz, new_xyz):
     """
@@ -334,9 +235,6 @@ def query_ball_point(radius, nsample, xyz, new_xyz):
     group_idx[mask] = group_first[mask]
 
     return group_idx
-
-
-# In[5]:
 
 
 class PointNetSetAbstraction(nn.Module):
@@ -385,17 +283,35 @@ class PointNetSetAbstraction(nn.Module):
         return new_xyz, new_points
 
 
-# In[6]:
-
-
 class PointNet(nn.Module):
     def __init__(self, num_class, normal_channel=True):
         super().__init__()
         in_channel = 6 if normal_channel else 3
         self.normal_channel = normal_channel
-        self.sa1 = PointNetSetAbstraction(npoint=512, radius=0.2, nsample=32, in_channel=in_channel, mlp=[64, 64, 128], group_all=False)
-        self.sa2 = PointNetSetAbstraction(npoint=128, radius=0.4, nsample=64, in_channel=128 + 3, mlp=[128, 128, 256], group_all=False)
-        self.sa3 = PointNetSetAbstraction(npoint=None, radius=None, nsample=None, in_channel=256 + 3, mlp=[256, 512, 1024], group_all=True)
+        self.sa1 = PointNetSetAbstraction(
+            npoint=512,
+            radius=0.2,
+            nsample=32,
+            in_channel=in_channel,
+            mlp=[64, 64, 128],
+            group_all=False,
+        )
+        self.sa2 = PointNetSetAbstraction(
+            npoint=128,
+            radius=0.4,
+            nsample=64,
+            in_channel=128 + 3,
+            mlp=[128, 128, 256],
+            group_all=False,
+        )
+        self.sa3 = PointNetSetAbstraction(
+            npoint=None,
+            radius=None,
+            nsample=None,
+            in_channel=256 + 3,
+            mlp=[256, 512, 1024],
+            group_all=True,
+        )
         self.fc1 = nn.Linear(1024, 512)
         self.bn1 = nn.BatchNorm1d(512)
         self.drop1 = nn.Dropout(0.4)
@@ -422,41 +338,32 @@ class PointNet(nn.Module):
         return x, l3_points
 
 
-# In[7]:
-
-
 class Loss(nn.Module):
     def __init__(self):
         super().__init__()
 
     def forward(self, pred, target, trans_feat):
         total_loss = F.nll_loss(pred, target)
-
         return total_loss
 
 
-# In[8]:
+transform = transforms.Compose(
+    [
+        Normalize(),
+        ToTensor(),
+    ]
+)
 
-
-classifier = PointNet(num_class=40, normal_channel=False).to('cuda')
-
-
-# In[9]:
-
-
+train_dataset = CustomDS(root=DATA_PATH + "train", loader=np.load, transform=transform)
+test_dataset = CustomDS(root=DATA_PATH + "test", loader=np.load, transform=transform)
+trainDataLoader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=10)
+testDataLoader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=10)
+classifier = PointNet(num_class=40, normal_channel=False).to("cuda")
 optimizer = torch.optim.Adam(
-    classifier.parameters(),
-    lr=1e-3,
-    betas=(0.9, 0.999),
-    eps=1e-08,
-    weight_decay=1e-4
+    classifier.parameters(), lr=1e-3, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-4
 )
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.7)
 criterion = Loss()
-
-
-# In[10]:
-
 
 for epoch in range(NUM_EPOCHS):
     mean_correct = []
@@ -489,16 +396,3 @@ for epoch in range(NUM_EPOCHS):
 
     train_instance_acc = np.mean(mean_correct)
     print(f"Train instance accuracy: {train_instance_acc:.4f}")
-
-
-# In[ ]:
-
-
-points[1]
-
-
-# In[ ]:
-
-
-
-
