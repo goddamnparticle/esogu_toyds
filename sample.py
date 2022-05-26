@@ -1,31 +1,19 @@
 import os
 import torch
 import random
+import json
 import numpy as np
+from glob import glob
 from tqdm import tqdm
-from plyfile import PlyData
 from torch.utils.data import DataLoader
 from torchvision.datasets.folder import DatasetFolder
 
-EXT = (".ply", ".off")
-
+EXT = ".off",
+NUM_POINTS = 1024
+DATA_ROOT = "./data/ModelNet40/"
+SAMPLER_BSIZE = 32
 
 def read_ply(path):
-
-    with open(path, "rb") as f:
-        data = PlyData.read(f)
-    verts = [torch.tensor(data["vertex"][axis]) for axis in ["x", "y", "z"]]
-    verts = torch.stack(verts, dim=-1)
-    faces = None
-    if "face" in data:
-        faces = data["face"]["vertex_indices"]
-        faces = [torch.tensor(face, dtype=torch.long) for face in faces]
-        faces = torch.stack(faces)
-
-    return verts, faces
-
-
-def read_ply_native(path):
 
     file = open(path, "r")
     safe_number = 20
@@ -121,19 +109,17 @@ class RawLoader(DatasetFolder):
         )
 
 
-def main():
+def main(**cfg):
     """
 
     Create new data in 'BINARY' format from raw data meshes and 'DELETE' mesh files.
     Sample each mesh NUM_POINTS times.
 
     """
-
-    NUM_POINTS = 1024
-    DATA_ROOT = "./CustomData/"
+    loader = read_ply if cfg["ext"] == ".ply" else read_off
 
     dataset_train = RawLoader(
-        root=DATA_ROOT + "train", loader=read_off, transform=PointSampler(NUM_POINTS)
+        root=DATA_ROOT + "train", loader=loader, transform=PointSampler(NUM_POINTS)
     )
     dataloader_train = DataLoader(dataset_train, batch_size=32, num_workers=32)
 
@@ -147,9 +133,11 @@ def main():
             for sample_name, point in zip(sample_names, points)
         ]
 
-    
+
+    [os.remove(file) for file in glob(DATA_ROOT +  f"train/*.{EXT}")]
+
     dataset_test = RawLoader(
-        root=DATA_ROOT + "test", loader=read_off, transform=PointSampler(NUM_POINTS)
+        root=DATA_ROOT + "test", loader=loader, transform=PointSampler(NUM_POINTS)
     )
     dataloader_test = DataLoader(dataset_test, batch_size=32, num_workers=32)
 
@@ -163,6 +151,10 @@ def main():
             for sample_name, point in zip(sample_names, points)
         ]
 
+    [os.remove(file) for file in glob(DATA_ROOT +  f"test/*{EXT}")]
 
 if __name__ == "__main__":
-    main()
+
+    with open("config.json", "r") as f:
+        cfg = json.load(f)
+    main(**cfg)

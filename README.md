@@ -91,9 +91,9 @@ This repo provides a toy dataset collected by EEE undergraduate students of [Esk
                 │   └── ...
                  ...   
 
-To create a point cloud dataset `.ply` object files require sampling. `sample_raw.py` will sample and save each file as binary. This process can be configured with `config.json`. A sampled binary dataset is available for [download](https://drive.google.com/uc?export=download&id=1TRUoqAtnNTft35NQP2AnHSqxbmKizSi9&confirm=t). 
+To create a point cloud dataset `.ply` object files require sampling. `sample.py` will sample and save each file as binary. This process can be configured with `config.json`. A sampled binary dataset is available for [download](https://drive.google.com/uc?export=download&id=1TRUoqAtnNTft35NQP2AnHSqxbmKizSi9&confirm=t). 
 
-**NOTE**: Running `sample_raw.py` will replace`.ply` files with binary `.npy` ones.
+**NOTE**: Running `sample.py` will replace`.ply` files with binary `.npy` ones.
 
 This Colab notebook trains a PointNet++ model. Notebook only works with the sampled binary dataset because of high computation costs. 
 
@@ -127,7 +127,7 @@ A GPU highly recommended for training PointNet++.
 ## Sampling Dataset and Training PointNet++
 Sampling and training processes have common configuration file `config.json`. Sample dataset with 
 ```sh
-python sample_raw.py
+python sample.py
 ```
 
 A PointNet++ model can be trained with 

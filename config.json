@@ -1,0 +1,7 @@
+{
+    "ext": ".off",
+    "num_points": 1024,
+    "data_root": "./data/ModelNet40/",
+    "sampler_bsize": 32,
+
+}
