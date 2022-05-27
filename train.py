@@ -32,21 +32,13 @@ class CustomDS(DatasetFolder):
             is_valid_file=is_valid_file,
         )
 
+def Normalize(points):
+    norm_points = points - np.mean(points, axis=0)
+    norm_points /= np.max(np.linalg.norm(norm_points, axis=1))
+    return norm_points
 
-class Normalize(object):
-    def __call__(self, pointcloud):
-        assert len(pointcloud.shape) == 2
-
-        norm_pointcloud = pointcloud - np.mean(pointcloud, axis=0)
-        norm_pointcloud /= np.max(np.linalg.norm(norm_pointcloud, axis=1))
-
-        return norm_pointcloud
-
-
-class ToTensor(object):
-    def __call__(self, pointcloud):
-        assert len(pointcloud.shape) == 2
-        return torch.from_numpy(pointcloud)
+def ToTensor(points):
+    return torch.from_numpy(points)
 
 
 def sample_and_group(npoint, radius, nsample, xyz, points, returnfps=False):

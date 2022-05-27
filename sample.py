@@ -9,10 +9,6 @@ from torch.utils.data import DataLoader
 from torchvision.datasets.folder import DatasetFolder
 
 EXT = (".off",)
-NUM_POINTS = 1024
-DATA_ROOT = "./data/ModelNet40/"
-SAMPLER_BSIZE = 32
-
 
 def read_ply(path):
 
@@ -137,7 +133,7 @@ def main(
         ]
         break
 
-    [os.remove(file) for file in glob(data_root + f"train/*/*.{ext}")]
+    [os.remove(file) for file in glob(data_root + f"train/*/*{ext}")]
 
     dataset_test = RawLoader(
         root=data_root + "test", loader=loader, transform=PointSampler(num_points)
