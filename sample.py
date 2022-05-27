@@ -133,7 +133,7 @@ def main(
         ]
         break
 
-    [os.remove(file) for file in glob(data_root + f"train/*/*{ext}")]
+    [os.remove(file) for file in glob(data_root + f"train/*/*.{ext}")]
 
     dataset_test = RawLoader(
         root=data_root + "test", loader=loader, transform=PointSampler(num_points)

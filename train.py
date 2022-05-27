@@ -8,7 +8,7 @@ from torchvision.transforms import transforms
 from torchvision.datasets.folder import DatasetFolder
 
 USE_CPU = False
-DATA_PATH = ".data/ModelNet40_Binary/"
+DATA_PATH = "./data/ModelNet40_Binary/"
 NUM_EPOCHS = 5
 BATCH_SIZE = 128
 EXT = (".npy",)
@@ -344,8 +344,8 @@ class Loss(nn.Module):
 
 transform = transforms.Compose(
     [
-        Normalize(),
-        ToTensor(),
+        Normalize,
+        ToTensor,
     ]
 )
 
@@ -353,7 +353,6 @@ transform = transforms.Compose(
 def test(model, loader):
     mean_correct = []
     classifier = model.eval()
-
     for points, target in tqdm(loader, total=len(loader)):
         if not USE_CPU:
             points, target = points.cuda(), target.cuda()
@@ -362,9 +361,7 @@ def test(model, loader):
         pred_choice = pred.data.max(1)[1]
         correct = pred_choice.eq(target.long().data).cpu().sum()
         mean_correct.append(correct.item() / float(points.size()[0]))
-
     instance_acc = np.mean(mean_correct)
-
     return instance_acc
 
 
@@ -376,6 +373,7 @@ classifier = PointNet(num_class=40, normal_channel=False).to("cuda")
 optimizer = torch.optim.Adam(
     classifier.parameters(), lr=1e-3, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-4
 )
+
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.7)
 criterion = Loss()
 
@@ -408,23 +406,19 @@ for epoch in range(NUM_EPOCHS):
         optimizer.step()
 
     scheduler.step()
-
     train_instance_acc = np.mean(mean_correct)
     print(f"Train instance accuracy: {train_instance_acc:.4f}")
 
     with torch.no_grad():
-        instance_acc, class_acc = test(classifier.eval(), testDataLoader)
+        instance_acc = test(classifier.eval(), testDataLoader)
         if instance_acc >= best_instance_acc:
             best_instance_acc = instance_acc
             best_epoch = epoch + 1
-        if class_acc >= best_class_acc:
-            best_class_acc = class_acc
         if instance_acc >= best_instance_acc:
-            savepath = str('.') + "/best_model.pth"
+            savepath = str(".") + "/best_model.pth"
             state = {
                 "epoch": best_epoch,
                 "instance_acc": instance_acc,
-                "class_acc": class_acc,
                 "model_state_dict": classifier.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
             }
