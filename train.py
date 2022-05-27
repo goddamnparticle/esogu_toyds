@@ -32,10 +32,12 @@ class CustomDS(DatasetFolder):
             is_valid_file=is_valid_file,
         )
 
+
 def Normalize(points):
     norm_points = points - np.mean(points, axis=0)
     norm_points /= np.max(np.linalg.norm(norm_points, axis=1))
     return norm_points
+
 
 def ToTensor(points):
     return torch.from_numpy(points)
@@ -279,6 +281,7 @@ class PointNet(nn.Module):
     def __init__(self, num_class, normal_channel=True):
         super().__init__()
         in_channel = 6 if normal_channel else 3
+        self.num_class = num_class
         self.normal_channel = normal_channel
         self.sa1 = PointNetSetAbstraction(
             npoint=512,
@@ -310,7 +313,7 @@ class PointNet(nn.Module):
         self.fc2 = nn.Linear(512, 256)
         self.bn2 = nn.BatchNorm1d(256)
         self.drop2 = nn.Dropout(0.4)
-        self.fc3 = nn.Linear(256, num_class)
+        self.fc3 = nn.Linear(256, self.num_class)
 
     def forward(self, xyz):
         B, _, _ = xyz.shape
@@ -346,6 +349,25 @@ transform = transforms.Compose(
     ]
 )
 
+
+def test(model, loader):
+    mean_correct = []
+    classifier = model.eval()
+
+    for points, target in tqdm(loader, total=len(loader)):
+        if not USE_CPU:
+            points, target = points.cuda(), target.cuda()
+        points = points.transpose(2, 1)
+        pred, _ = classifier(points)
+        pred_choice = pred.data.max(1)[1]
+        correct = pred_choice.eq(target.long().data).cpu().sum()
+        mean_correct.append(correct.item() / float(points.size()[0]))
+
+    instance_acc = np.mean(mean_correct)
+
+    return instance_acc
+
+
 train_dataset = CustomDS(root=DATA_PATH + "train", loader=np.load, transform=transform)
 test_dataset = CustomDS(root=DATA_PATH + "test", loader=np.load, transform=transform)
 trainDataLoader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=10)
@@ -360,7 +382,6 @@ criterion = Loss()
 for epoch in range(NUM_EPOCHS):
     mean_correct = []
     classifier = classifier.train()
-    scheduler.step()
 
     for batch_id, (points, target) in tqdm(
         enumerate(trainDataLoader), total=len(trainDataLoader)
@@ -386,5 +407,25 @@ for epoch in range(NUM_EPOCHS):
         loss.backward()
         optimizer.step()
 
+    scheduler.step()
+
     train_instance_acc = np.mean(mean_correct)
     print(f"Train instance accuracy: {train_instance_acc:.4f}")
+
+    with torch.no_grad():
+        instance_acc, class_acc = test(classifier.eval(), testDataLoader)
+        if instance_acc >= best_instance_acc:
+            best_instance_acc = instance_acc
+            best_epoch = epoch + 1
+        if class_acc >= best_class_acc:
+            best_class_acc = class_acc
+        if instance_acc >= best_instance_acc:
+            savepath = str('.') + "/best_model.pth"
+            state = {
+                "epoch": best_epoch,
+                "instance_acc": instance_acc,
+                "class_acc": class_acc,
+                "model_state_dict": classifier.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
+            }
+            torch.save(state, savepath)
