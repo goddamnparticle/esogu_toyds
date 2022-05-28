@@ -8,9 +8,9 @@ from torchvision.transforms import transforms
 from torchvision.datasets.folder import DatasetFolder
 
 USE_CPU = False
-DATA_PATH = "./data/ModelNet40_Binary/"
+DATA_PATH = "./data/ESOGU_ToyDS_Binary/"
 NUM_EPOCHS = 5
-BATCH_SIZE = 128
+BATCH_SIZE = 32
 EXT = (".npy",)
 
 

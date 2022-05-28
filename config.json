@@ -1,8 +1,8 @@
 {
     "sampler": {
-        "ext": ".off",
+        "ext": ".ply",
         "num_points": 1024,
-        "data_root": "./data/ModelNet40/",
+        "data_root": "./data/ESOGU_ToyDS_Binary/",
         "sampler_bsize": 32,
         "num_workers": 32
     },

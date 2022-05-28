@@ -1,52 +1,46 @@
 import os
+import json
+import time
 import torch
 import random
-import json
 import numpy as np
 from glob import glob
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from torchvision.datasets.folder import DatasetFolder
 
-EXT = (".off",)
+EXT = (".ply",)
 
 def read_ply(path):
-
     file = open(path, "r")
     safe_number = 20
     for i in range(safe_number):
         line = file.readline().strip()
         if "element vertex" in line:
             n_verts = int(line.split(" ")[2])
-
         elif "element face" in line:
             n_faces = int(line.split(" ")[2])
-
         elif "end_header" in line:
             break
-
-    verts = [[float(s) for s in file.readline().strip().split(" ")] for i_vert in range(n_verts)]
+    verts = [[float(s) for s in file.readline().strip().split(" ")[:3]] for i_vert in range(n_verts)]
     faces = [
-        [int(s) for s in file.readline().strip().split(" ")][1:] for i_face in range(n_faces)
+        [int(s) for s in file.readline().strip().split(" ")[1:4]] for i_face in range(n_faces)
     ]
     file.close()
     return torch.tensor(verts), torch.tensor(faces)
 
 
 def read_off(path):
-
     file = open(path, "r")
     off_header = file.readline().strip()
     if "OFF" == off_header:
         n_verts, n_faces, __ = tuple([int(s) for s in file.readline().strip().split(" ")])
     else:
         n_verts, n_faces, __ = tuple([int(s) for s in off_header[3:].split(" ")])
-
     verts = [[float(s) for s in file.readline().strip().split(" ")] for i_vert in range(n_verts)]
     faces = [
         [int(s) for s in file.readline().strip().split(" ")][1:] for i_face in range(n_faces)
     ]
-
     file.close()
     return torch.tensor(verts), torch.tensor(faces)
 
@@ -107,21 +101,17 @@ class RawLoader(DatasetFolder):
 
 
 def main(
-    ext=".ply", num_points=1024, data_root="./data/ModelNet40", sampler_bsize=32, num_workers=4
+    ext=".ply", num_points=1024, data_root="./data/ModelNet40/", sampler_bsize=32, num_workers=4
 ):
     """
-
     Create new data in 'BINARY' format from raw data meshes and 'DELETE' mesh files.
     Sample each mesh NUM_POINTS times.
-
     """
     loader = read_ply if ext == ".ply" else read_off
-
     dataset_train = RawLoader(
         root=data_root + "train", loader=loader, transform=PointSampler(num_points)
     )
     dataloader_train = DataLoader(dataset_train, batch_size=sampler_bsize, num_workers=num_workers)
-
     for idx, file in tqdm(enumerate(dataloader_train), total=len(dataloader_train)):
         points, _ = file
         batch_size = points.shape[0]
@@ -131,15 +121,12 @@ def main(
             np.save(sample_name, point.squeeze())
             for sample_name, point in zip(sample_names, points)
         ]
-        break
 
-    [os.remove(file) for file in glob(data_root + f"train/*/*.{ext}")]
-
+    # [os.remove(file) for file in glob(data_root + f"train/*/*{ext}")]
     dataset_test = RawLoader(
         root=data_root + "test", loader=loader, transform=PointSampler(num_points)
     )
     dataloader_test = DataLoader(dataset_test, batch_size=sampler_bsize, num_workers=num_workers)
-
     for idx, file in tqdm(enumerate(dataloader_test), total=len(dataloader_test)):
         points, _ = file
         batch_size = points.shape[0]
@@ -149,14 +136,12 @@ def main(
             np.save(sample_name, point.squeeze())
             for sample_name, point in zip(sample_names, points)
         ]
-        break
 
-    [os.remove(file) for file in glob(data_root + f"test/*/*{ext}")]
+    # [os.remove(file) for file in glob(data_root + f"test/*/*{ext}")]
 
 
 if __name__ == "__main__":
 
     with open("config.json", "r") as f:
         cfg = json.load(f)
-
     main(**cfg["sampler"])
