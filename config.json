@@ -2,9 +2,9 @@
     "sampler": {
         "ext": ".ply",
         "num_points": 1024,
-        "data_root": "./data/ESOGU_ToyDS_Binary/",
+        "data_root": "./data/ESOGU_ToyDS_S1024NAB/",
         "sampler_bsize": 32,
-        "num_workers": 32
+        "num_workers": 10
     },
 
     "train": {

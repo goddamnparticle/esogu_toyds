@@ -8,8 +8,8 @@ from torchvision.transforms import transforms
 from torchvision.datasets.folder import DatasetFolder
 
 USE_CPU = False
-DATA_PATH = "./data/ESOGU_ToyDS_Binary/"
-NUM_EPOCHS = 5
+DATA_PATH = "./data/ESOGU_ToyDS_S4096NAB/"
+NUM_EPOCHS = 500
 BATCH_SIZE = 32
 EXT = (".npy",)
 
@@ -177,8 +177,6 @@ def index_points(points, idx):
     batch_indices = (
         torch.arange(B, dtype=torch.long).to(device).view(view_shape).repeat(repeat_shape)
     )
-    assert (0 <= batch_indices.min()) and (batch_indices.max() <= 1023)
-    assert (0 <= idx.min()) and (idx.max() <= 1023)
     new_points = points[batch_indices, idx, :]
     return new_points
 
@@ -355,7 +353,7 @@ def test(model, loader):
     classifier = model.eval()
     for points, target in tqdm(loader, total=len(loader)):
         if not USE_CPU:
-            points, target = points.cuda(), target.cuda()
+            points, target = points.type(torch.float32).cuda(), target.type(torch.float32).cuda()
         points = points.transpose(2, 1)
         pred, _ = classifier(points)
         pred_choice = pred.data.max(1)[1]
@@ -411,15 +409,16 @@ for epoch in range(NUM_EPOCHS):
 
     with torch.no_grad():
         instance_acc = test(classifier.eval(), testDataLoader)
-        if instance_acc >= best_instance_acc:
-            best_instance_acc = instance_acc
-            best_epoch = epoch + 1
-        if instance_acc >= best_instance_acc:
-            savepath = str(".") + "/best_model.pth"
-            state = {
-                "epoch": best_epoch,
-                "instance_acc": instance_acc,
-                "model_state_dict": classifier.state_dict(),
-                "optimizer_state_dict": optimizer.state_dict(),
-            }
-            torch.save(state, savepath)
+        print(f"Test acc: {instance_acc:.3f}")
+        # if instance_acc >= best_instance_acc:
+        #     best_instance_acc = instance_acc
+        #     best_epoch = epoch + 1
+        # if instance_acc >= best_instance_acc:
+        #     savepath = str(".") + "/best_model.pth"
+        #     state = {
+        #         "epoch": best_epoch,
+        #         "instance_acc": instance_acc,
+        #         "model_state_dict": classifier.state_dict(),
+        #         "optimizer_state_dict": optimizer.state_dict(),
+        #     }
+        #     torch.save(state, savepath)
