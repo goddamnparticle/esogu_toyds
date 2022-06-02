@@ -40,17 +40,6 @@ def ToTensor(points):
 
 
 def sample_and_group(npoint, radius, nsample, xyz, points, returnfps=False):
-    """
-    Input:
-        npoint:
-        radius:
-        nsample:
-        xyz: input points position data, [B, N, 3]
-        points: input points data, [B, N, D]
-    Return:
-        new_xyz: sampled points position data, [B, npoint, nsample, 3]
-        new_points: sampled points data, [B, npoint, nsample, 3+D]
-    """
     B, N, C = xyz.shape
     S = npoint
     fps_idx = farthest_point_sample(xyz, npoint)  # [B, npoint, C]
@@ -74,14 +63,6 @@ def sample_and_group(npoint, radius, nsample, xyz, points, returnfps=False):
 
 
 def sample_and_group_all(xyz, points):
-    """
-    Input:
-        xyz: input points position data, [B, N, 3]
-        points: input points data, [B, N, D]
-    Return:
-        new_xyz: sampled points position data, [B, 1, 3]
-        new_points: sampled points data, [B, 1, N, 3+D]
-    """
     device = xyz.device
     B, N, C = xyz.shape
     new_xyz = torch.zeros(B, 1, C).to(device)
@@ -326,7 +307,7 @@ transform = transforms.Compose(
 def test(model, data_loader, use_cpu):
     mean_correct = []
     classifier = model.eval()
-    for points, target in tqdm(data_loader, total=len(data_loader)):
+    for points, target in data_loader:
         if not use_cpu:
             points, target = points.type(torch.float32).cuda(), target.type(torch.float32).cuda()
         points = points.transpose(2, 1)
@@ -341,8 +322,9 @@ def main(data_root, num_epochs, batch_size, use_cpu, num_workers):
 
     train_dataset = CustomDS(root=data_root + "train", loader=np.load, transform=transform)
     test_dataset = CustomDS(root=data_root + "test", loader=np.load, transform=transform)
-    trainDataLoader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=10)
-    testDataLoader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=10)
+    trainDataLoader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    testDataLoader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+
     classifier = PointNet(num_class=10, normal_channel=False).to("cuda")
     optimizer = torch.optim.Adam(
         classifier.parameters(), lr=1e-3, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-4
@@ -350,13 +332,11 @@ def main(data_root, num_epochs, batch_size, use_cpu, num_workers):
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.7)
     criterion = Loss()
 
-    for epoch in range(num_epochs):
-        mean_correct = []
-        classifier = classifier.train()
+    pbar = tqdm(range(num_epochs), total=num_epochs, desc="Epoch")
+    for epoch in pbar:
 
-        for batch_id, (points, target) in tqdm(
-            enumerate(trainDataLoader), total=len(trainDataLoader)
-        ):
+        classifier = classifier.train()
+        for points, target in trainDataLoader:
             optimizer.zero_grad()
             points = points.squeeze(1)
             points = points.data.numpy()
@@ -371,20 +351,14 @@ def main(data_root, num_epochs, batch_size, use_cpu, num_workers):
 
             pred, trans_feat = classifier(points)
             loss = criterion(pred, target.long(), trans_feat)
-            pred_choice = pred.data.max(1)[1]
-
-            correct = pred_choice.eq(target.long().data).cpu().sum()
-            mean_correct.append(correct.item() / float(points.size()[0]))
             loss.backward()
             optimizer.step()
-
+            pbar.update()
         scheduler.step()
-        train_instance_acc = np.mean(mean_correct)
-        print(f"Train instance accuracy: {train_instance_acc:.4f}")
 
         with torch.no_grad():
             instance_acc = test(classifier.eval(), testDataLoader, use_cpu)
-            print(f"Test acc: {instance_acc:.3f}")
+            # print(f"Test acc: {instance_acc:.3f}")
             # if instance_acc >= best_instance_acc:
             #     best_instance_acc = instance_acc
             #     best_epoch = epoch + 1
@@ -397,8 +371,13 @@ def main(data_root, num_epochs, batch_size, use_cpu, num_workers):
             #         "optimizer_state_dict": optimizer.state_dict(),
             #     }
             #     torch.save(state, savepath)
+            pbar.set_postfix({
+                "loss": loss.item(), 
+                "test_acc": instance_acc,
+                })
 
 if __name__ == "__main__":
+
     with open('config.json', 'r') as f:
         cfg = json.load(f)
     main(**cfg['train'])
