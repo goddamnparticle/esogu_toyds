@@ -1,12 +1,17 @@
 {
     "sampler": {
+        "data_root": "./data/ESOGU_ToyDS_S16384AB/",
+        "num_points": 16384,
         "ext": ".ply",
-        "num_points": 1024,
-        "data_root": "./data/ESOGU_ToyDS_S1024NAB/",
         "sampler_bsize": 32,
         "num_workers": 10
     },
 
     "train": {
+        "data_root": "./data/ESOGU_ToyDS_S8192AB/",
+        "num_epochs": 500,
+        "batch_size": 32,
+        "use_cpu": false,
+        "num_workers": 10
     }
 }

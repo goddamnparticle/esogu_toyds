@@ -1,18 +1,14 @@
 import torch
 import numpy as np
 import torch.nn as nn
+import json
 from tqdm import tqdm
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torchvision.transforms import transforms
 from torchvision.datasets.folder import DatasetFolder
 
-USE_CPU = False
-DATA_PATH = "./data/ESOGU_ToyDS_S4096NAB/"
-NUM_EPOCHS = 500
-BATCH_SIZE = 32
 EXT = (".npy",)
-
 
 class CustomDS(DatasetFolder):
     def __init__(
@@ -137,11 +133,7 @@ def shift_point_cloud(batch_data, shift_range=0.1):
 
 def farthest_point_sample(xyz, npoint):
     """
-    Input:
-        xyz: pointcloud data, [B, N, 3]
-        npoint: number of samples
-    Return:
-        centroids: sampled pointcloud index, [B, npoint]
+    Sample point cloud with FP algorithm and return sampled points' indices.
     """
     device = xyz.device
     B, N, C = xyz.shape
@@ -161,12 +153,7 @@ def farthest_point_sample(xyz, npoint):
 
 def index_points(points, idx):
     """
-
-    Input:
-        points: input points data, [B, N, C]
-        idx: sample index data, [B, S]
-    Return:
-        new_points:, indexed points data, [B, S, C]
+    Return index points.
     """
     device = points.device
     B = points.shape[0]
@@ -184,18 +171,6 @@ def index_points(points, idx):
 def square_distance(src, dst):
     """
     Calculate Euclid distance between each two points.
-
-    src^T * dst = xn * xm + yn * ym + zn * zm；
-    sum(src^2, dim=-1) = xn*xn + yn*yn + zn*zn;
-    sum(dst^2, dim=-1) = xm*xm + ym*ym + zm*zm;
-    dist = (xn - xm)^2 + (yn - ym)^2 + (zn - zm)^2
-         = sum(src**2,dim=-1)+sum(dst**2,dim=-1)-2*src^T*dst
-
-    Input:
-        src: source points, [B, N, C]
-        dst: target points, [B, M, C]
-    Output:
-        dist: per-point square distance, [B, N, M]
     """
     B, N, _ = src.shape
     _, M, _ = dst.shape
@@ -348,11 +323,11 @@ transform = transforms.Compose(
 )
 
 
-def test(model, loader):
+def test(model, data_loader, use_cpu):
     mean_correct = []
     classifier = model.eval()
-    for points, target in tqdm(loader, total=len(loader)):
-        if not USE_CPU:
+    for points, target in tqdm(data_loader, total=len(data_loader)):
+        if not use_cpu:
             points, target = points.type(torch.float32).cuda(), target.type(torch.float32).cuda()
         points = points.transpose(2, 1)
         pred, _ = classifier(points)
@@ -362,63 +337,68 @@ def test(model, loader):
     instance_acc = np.mean(mean_correct)
     return instance_acc
 
+def main(data_root, num_epochs, batch_size, use_cpu, num_workers):
 
-train_dataset = CustomDS(root=DATA_PATH + "train", loader=np.load, transform=transform)
-test_dataset = CustomDS(root=DATA_PATH + "test", loader=np.load, transform=transform)
-trainDataLoader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=10)
-testDataLoader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=10)
-classifier = PointNet(num_class=40, normal_channel=False).to("cuda")
-optimizer = torch.optim.Adam(
-    classifier.parameters(), lr=1e-3, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-4
-)
+    train_dataset = CustomDS(root=data_root + "train", loader=np.load, transform=transform)
+    test_dataset = CustomDS(root=data_root + "test", loader=np.load, transform=transform)
+    trainDataLoader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=10)
+    testDataLoader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=10)
+    classifier = PointNet(num_class=10, normal_channel=False).to("cuda")
+    optimizer = torch.optim.Adam(
+        classifier.parameters(), lr=1e-3, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-4
+    )
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.7)
+    criterion = Loss()
 
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.7)
-criterion = Loss()
+    for epoch in range(num_epochs):
+        mean_correct = []
+        classifier = classifier.train()
 
-for epoch in range(NUM_EPOCHS):
-    mean_correct = []
-    classifier = classifier.train()
+        for batch_id, (points, target) in tqdm(
+            enumerate(trainDataLoader), total=len(trainDataLoader)
+        ):
+            optimizer.zero_grad()
+            points = points.squeeze(1)
+            points = points.data.numpy()
+            points = random_point_dropout(points)
+            points[:, :, 0:3] = random_scale_point_cloud(points[:, :, 0:3])
+            points[:, :, 0:3] = shift_point_cloud(points[:, :, 0:3])
+            points = torch.Tensor(points)
+            points = points.transpose(2, 1)
 
-    for batch_id, (points, target) in tqdm(
-        enumerate(trainDataLoader), total=len(trainDataLoader)
-    ):
-        optimizer.zero_grad()
-        points = points.squeeze(1)
-        points = points.data.numpy()
-        points = random_point_dropout(points)
-        points[:, :, 0:3] = random_scale_point_cloud(points[:, :, 0:3])
-        points[:, :, 0:3] = shift_point_cloud(points[:, :, 0:3])
-        points = torch.Tensor(points)
-        points = points.transpose(2, 1)
+            if not use_cpu:
+                points, target = points.cuda(), target.cuda()
 
-        if not USE_CPU:
-            points, target = points.cuda(), target.cuda()
+            pred, trans_feat = classifier(points)
+            loss = criterion(pred, target.long(), trans_feat)
+            pred_choice = pred.data.max(1)[1]
 
-        pred, trans_feat = classifier(points)
-        loss = criterion(pred, target.long(), trans_feat)
-        pred_choice = pred.data.max(1)[1]
+            correct = pred_choice.eq(target.long().data).cpu().sum()
+            mean_correct.append(correct.item() / float(points.size()[0]))
+            loss.backward()
+            optimizer.step()
 
-        correct = pred_choice.eq(target.long().data).cpu().sum()
-        mean_correct.append(correct.item() / float(points.size()[0]))
-        loss.backward()
-        optimizer.step()
+        scheduler.step()
+        train_instance_acc = np.mean(mean_correct)
+        print(f"Train instance accuracy: {train_instance_acc:.4f}")
 
-    scheduler.step()
-    train_instance_acc = np.mean(mean_correct)
-    print(f"Train instance accuracy: {train_instance_acc:.4f}")
+        with torch.no_grad():
+            instance_acc = test(classifier.eval(), testDataLoader, use_cpu)
+            print(f"Test acc: {instance_acc:.3f}")
+            # if instance_acc >= best_instance_acc:
+            #     best_instance_acc = instance_acc
+            #     best_epoch = epoch + 1
+            # if instance_acc >= best_instance_acc:
+            #     savepath = str(".") + "/best_model.pth"
+            #     state = {
+            #         "epoch": best_epoch,
+            #         "instance_acc": instance_acc,
+            #         "model_state_dict": classifier.state_dict(),
+            #         "optimizer_state_dict": optimizer.state_dict(),
+            #     }
+            #     torch.save(state, savepath)
 
-    with torch.no_grad():
-        instance_acc = test(classifier.eval(), testDataLoader)
-        print(f"Test acc: {instance_acc:.3f}")
-        # if instance_acc >= best_instance_acc:
-        #     best_instance_acc = instance_acc
-        #     best_epoch = epoch + 1
-        # if instance_acc >= best_instance_acc:
-        #     savepath = str(".") + "/best_model.pth"
-        #     state = {
-        #         "epoch": best_epoch,
-        #         "instance_acc": instance_acc,
-        #         "model_state_dict": classifier.state_dict(),
-        #         "optimizer_state_dict": optimizer.state_dict(),
-        #     }
-        #     torch.save(state, savepath)
+if __name__ == "__main__":
+    with open('config.json', 'r') as f:
+        cfg = json.load(f)
+    main(**cfg['train'])
