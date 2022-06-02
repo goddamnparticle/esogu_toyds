@@ -23,7 +23,7 @@
 
 <!-- ABOUT THE PROJECT -->
 
-![Product Name Screen Shot](imgs/bunny.png)
+![Product Name Screen Shot](imgs/shoe.png)
 
 This repo provides a toy dataset collected by EEE undergraduate students of [Eskisehir Osmangazi University](https://ogu.edu.tr) with implementation of [PointNet++](https://arxiv.org/abs/1706.02413). Dataset consists of 10 different object classes and each class contains 10 different 3D objects. Objects were saved as ASCII coded `.ply` files. 3D objects were obtained with third-party photogrammetry software ([Meshroom](https://alicevision.org/#meshroom), [Agisoft](https://agisoft.com)). Also, for cleaning and editing tasks [MeshLab](https://meshlab.net) was utilized.
 
