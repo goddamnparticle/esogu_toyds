@@ -30,7 +30,7 @@ This repo provides a toy dataset collected by EEE undergraduate students of [Esk
 <!-- GETTING STARTED -->
 ## Getting Started
 
-[Download](https://drive.google.com/uc?export=download&id=1_98r2c75YWbcJ9YK3JJ3Oe_IvYgn5RY5&confirm=t) dataset and extract to `data` folder this also can be done with `download_data.sh` script for Linux users. Folder structure should be as follows.  
+[Download](https://drive.google.com/uc?export=download&id=1ChN4KUpgYlVHFm2ElTTY30uvx0u8pM4a&confirm=t) dataset and extract to `data` folder this also can be done with `download_data.sh` script for Linux users. Folder structure should be as follows.  
 
             dataset/
             ├── train/
@@ -55,7 +55,7 @@ This repo provides a toy dataset collected by EEE undergraduate students of [Esk
                 │   └── ...
                  ...   
 
-To create a point cloud dataset `.ply` object files require sampling. `sample.py` will sample and save each file as binary. This process can be configured with `config.json`. A sampled binary dataset is available for [download](https://drive.google.com/uc?export=download&id=1WisS_DvtqVD4T3mxI2UcsxplMjLLy6eW&confirm=t). 
+To create a point cloud dataset `.ply` object files require sampling. `sample.py` will sample and save each file as binary. This process can be configured with `config.json`. A sampled binary dataset is available for [download](https://drive.google.com/uc?export=download&id=14Bgxb7ft4QJy97KhIQ0yYHk_7yQgE-Nr&confirm=t). 
 
 **NOTE**: Running `sample.py` will replace`.ply` files with binary `.npy` ones.
 
