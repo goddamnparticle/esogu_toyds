@@ -1,7 +1,7 @@
+import json
 import torch
 import numpy as np
 import torch.nn as nn
-import json
 from tqdm import tqdm
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
@@ -306,12 +306,11 @@ transform = transforms.Compose(
 
 def test(model, data_loader, use_cpu):
     mean_correct = []
-    classifier = model.eval()
     for points, target in data_loader:
         if not use_cpu:
             points, target = points.type(torch.float32).cuda(), target.type(torch.float32).cuda()
         points = points.transpose(2, 1)
-        pred, _ = classifier(points)
+        pred, _ = model(points)
         pred_choice = pred.data.max(1)[1]
         correct = pred_choice.eq(target.long().data).cpu().sum()
         mean_correct.append(correct.item() / float(points.size()[0]))
@@ -332,10 +331,12 @@ def main(data_root, num_epochs, batch_size, use_cpu, num_workers):
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.7)
     criterion = Loss()
 
-    pbar = tqdm(range(num_epochs), total=num_epochs, desc="Epoch")
+    pbar = tqdm(range(num_epochs), desc='Training')
+    best_acc = 0.0
     for epoch in pbar:
 
         classifier = classifier.train()
+        loss_list = []
         for points, target in trainDataLoader:
             optimizer.zero_grad()
             points = points.squeeze(1)
@@ -353,28 +354,33 @@ def main(data_root, num_epochs, batch_size, use_cpu, num_workers):
             loss = criterion(pred, target.long(), trans_feat)
             loss.backward()
             optimizer.step()
-            pbar.update()
+            loss_list.append(loss.item())
+
         scheduler.step()
 
         with torch.no_grad():
-            instance_acc = test(classifier.eval(), testDataLoader, use_cpu)
-            # print(f"Test acc: {instance_acc:.3f}")
-            # if instance_acc >= best_instance_acc:
-            #     best_instance_acc = instance_acc
-            #     best_epoch = epoch + 1
-            # if instance_acc >= best_instance_acc:
-            #     savepath = str(".") + "/best_model.pth"
-            #     state = {
-            #         "epoch": best_epoch,
-            #         "instance_acc": instance_acc,
-            #         "model_state_dict": classifier.state_dict(),
-            #         "optimizer_state_dict": optimizer.state_dict(),
-            #     }
-            #     torch.save(state, savepath)
+            test_acc = test(classifier.eval(), testDataLoader, use_cpu)
+
+            if test_acc > best_acc:
+                best_acc = test_acc
+                savepath = str(".") + "/best_model.pth"
+                state = {
+                    "test_acc": test_acc,
+                    "model_state_dict": classifier.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                }
+                torch.save(state, savepath)
+
             pbar.set_postfix({
                 "loss": loss.item(), 
-                "test_acc": instance_acc,
+                "test_acc": test_acc,
                 })
+
+    pbar.close()
+    classifier.load_state_dict(state['model_state_dict'])
+    with torch.no_grad():
+        overall_acc = test(classifier.eval(), testDataLoader, use_cpu)
+        print(f"Test accuracy: {overall_acc:.4f}")
 
 if __name__ == "__main__":
 

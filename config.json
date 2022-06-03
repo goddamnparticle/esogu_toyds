@@ -8,8 +8,8 @@
     },
 
     "train": {
-        "data_root": "./data/ESOGU_ToyDS_S8192AB/",
-        "num_epochs": 500,
+        "data_root": "./data/ESOGU_ToyDS_S4096AB/",
+        "num_epochs": 4,
         "batch_size": 32,
         "use_cpu": false,
         "num_workers": 10
