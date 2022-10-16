@@ -1,5 +1,6 @@
 __pycache__
 .vscode
+sampler/.cache
 build
 data/*
 !data/.gitkeep
