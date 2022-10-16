@@ -5,7 +5,7 @@ build
 data/*
 !data/.gitkeep
 shoes*
-.vimspector*
+*vimspector*
 .clang-format*
 .ipynb_checkpoints
 *.pth
