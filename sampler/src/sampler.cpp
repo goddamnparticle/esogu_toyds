@@ -277,6 +277,7 @@ void printHelp(void)
               << " number of files to assign a thread (default = 10)\n";
     std::cout << "RECURSIVE_CHUNK_SIZE  :"
               << " for large files (Faces > 200000) create subthreads for faster sampling(default = 16)\n\n";
+    std::cout << "Example Usage : samp_par -p NUMBER_OF_POINTS | -d DATA_PATH | -c CHUNK_SIZE | -r RECURSIVE_CHUNK_SIZE | -h for help\n\n";
 }
 
 void MeshSampler::printLog(void)
