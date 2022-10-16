@@ -1,0 +1,3 @@
+/home/yorek/sample/sampler/build/CMakeFiles/Sampler.dir
+/home/yorek/sample/sampler/build/CMakeFiles/edit_cache.dir
+/home/yorek/sample/sampler/build/CMakeFiles/rebuild_cache.dir

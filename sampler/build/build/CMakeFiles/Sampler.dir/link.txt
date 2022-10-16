@@ -1,0 +1,1 @@
+/usr/bin/c++ -std=c++17 -Wall -g -std=c++17 -Wall CMakeFiles/Sampler.dir/src/main.cpp.o CMakeFiles/Sampler.dir/src/sampler.cpp.o -o Sampler 

@@ -1,0 +1,12 @@
+[
+{
+  "directory": "/home/yorek/sample/sampler/build",
+  "command": "/usr/bin/c++  -I/home/yorek/sample/sampler/include -std=c++17 -Wall -g -std=c++17 -Wall -o CMakeFiles/Sampler.dir/src/main.cpp.o -c /home/yorek/sample/sampler/src/main.cpp",
+  "file": "/home/yorek/sample/sampler/src/main.cpp"
+},
+{
+  "directory": "/home/yorek/sample/sampler/build",
+  "command": "/usr/bin/c++  -I/home/yorek/sample/sampler/include -std=c++17 -Wall -g -std=c++17 -Wall -o CMakeFiles/Sampler.dir/src/sampler.cpp.o -c /home/yorek/sample/sampler/src/sampler.cpp",
+  "file": "/home/yorek/sample/sampler/src/sampler.cpp"
+}
+]

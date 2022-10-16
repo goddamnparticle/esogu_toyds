@@ -11,6 +11,7 @@ from torchvision.datasets.folder import DatasetFolder
 
 EXT = (".ply",)
 
+
 def read_ply(path):
 
     file = open(path, "r")
