@@ -59,6 +59,10 @@ To create a point cloud dataset `.ply` object files require sampling. `sample.py
 
 **NOTE**: Running `sample.py` will replace`.ply` files with binary `.npy` ones.
 
+Sampling process implemented in C++. In `sampler` folder sampler tool should be compiled in order to sample faster. `cmake` tool is recommended. 
+
+**NOTE**: Running `Sampler` tool requires high memory. It will crash if sampling points `-p` flag set to bigger value than 1024.
+
 This Colab notebook trains a PointNet++ model. Notebook only works with the sampled binary dataset because of high computation costs. 
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/goddamnparticle/esogu_toyds/blob/master/train_notebook.ipynb)
@@ -93,6 +97,11 @@ Sampling and training processes have common configuration file `config.json`. Sa
 ```sh
 python sample.py
 ```
+In order to compile Sampler tool, in the sampler folder enter below commands
+```sh
+cmake . -B build && cmake --build build
+```
+`./build/Sampler -h` will show tool usage and parameter information.
 
 A PointNet++ model can be trained with 
 ```sh 
